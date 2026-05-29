@@ -27,6 +27,21 @@ class ParseRecordTests(unittest.TestCase):
         self.assertIsNone(msg["agent_id"])
         self.assertEqual(tools, [])
 
+    def test_flat_cache_creation_falls_back_to_5m(self):
+        # Older transcripts carry only the flat cache_creation_input_tokens
+        # total without the nested ephemeral breakdown. It must still be
+        # priced (attributed to the 5-minute tier) rather than dropped.
+        rec = {
+            "uuid": "msg-flat", "type": "assistant",
+            "sessionId": "sess-1", "timestamp": "2026-01-01T00:00:00Z",
+            "message": {"id": "m1", "model": "claude-opus-4-8",
+                        "usage": {"input_tokens": 10, "output_tokens": 5,
+                                  "cache_creation_input_tokens": 500}},
+        }
+        msg, _ = parse_record(rec, project_slug="proj-x")
+        self.assertEqual(msg["cache_create_5m_tokens"], 500)
+        self.assertEqual(msg["cache_create_1h_tokens"], 0)
+
 
 class ToolExtractionTests(unittest.TestCase):
     def test_extracts_tool_uses(self):
