@@ -46,12 +46,20 @@ _TARGET_FIELDS = {
 def _usage(rec: dict) -> dict:
     u = (rec.get("message") or {}).get("usage") or {}
     cc = u.get("cache_creation") or {}
+    create_5m = int(cc.get("ephemeral_5m_input_tokens") or 0)
+    create_1h = int(cc.get("ephemeral_1h_input_tokens") or 0)
+    # Older transcripts predate the nested cache_creation breakdown and carry
+    # only the flat cache_creation_input_tokens total. Without this fallback
+    # those tokens price at zero, silently undercounting cache-creation cost.
+    # Attribute the flat total to the 5-minute tier (the default TTL).
+    if not cc:
+        create_5m = int(u.get("cache_creation_input_tokens") or 0)
     return {
         "input_tokens":           int(u.get("input_tokens") or 0),
         "output_tokens":          int(u.get("output_tokens") or 0),
         "cache_read_tokens":      int(u.get("cache_read_input_tokens") or 0),
-        "cache_create_5m_tokens": int(cc.get("ephemeral_5m_input_tokens") or 0),
-        "cache_create_1h_tokens": int(cc.get("ephemeral_1h_input_tokens") or 0),
+        "cache_create_5m_tokens": create_5m,
+        "cache_create_1h_tokens": create_1h,
     }
 
 
